@@ -4,7 +4,7 @@ installProduct() {
     echo "Install DataSunrise..." >> $PREP_LOG
         DS_INSTALLER=DSCustomBuild.run
           if [[ "${DSDISTURL:0:2}" == "S3" || "${DSDISTURL:0:2}" == "s3" ]]; then
-              aws s3 cp "$DSDISTURL" $DS_INSTALLER
+              aws s3 cp "$DSDISTURL" $DS_INSTALLER --only-show-errors
           else
               wget "$DSDISTURL" -O $DS_INSTALLER -q
           fi
@@ -38,7 +38,7 @@ installProduct() {
     ######################################################
     sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
     setenforce 0
-    restorecon -vRF /opt/datasunrise/
+    restorecon -vRF /opt/datasunrise/ > /dev/null
     semanage port -a -t datasunrise_port_t -p tcp 11000-11010
     semanage port -a -t datasunrise_port_t -p tcp $TRG_DBPORT
     # semanage port -a -t datasunrise_port_t -p tcp $TRG_ADDITIONAL_INTERFACE_PORT

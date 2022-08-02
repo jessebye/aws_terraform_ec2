@@ -2,7 +2,8 @@
 
 export PREP_LOG=/var/log/cloud-init-output.log
 echo "Configuration script has been started" >> $PREP_LOG
-sudo yum update -y
+sudo yum update -y -q
+shopt -s extglob
 export CFS_BGN_TS=$(date +%s.%N)
 
 export AMIProductCode=e4d3d3b6266ocd12it8gny7gh

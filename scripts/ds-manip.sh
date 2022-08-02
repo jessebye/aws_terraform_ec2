@@ -1,9 +1,9 @@
 #!/bin/bash
 makeItMineParam() {
-    chown datasunrise:datasunrise -R "$1"
+    chown -R datasunrise:datasunrise "$1"
 }
 makeItMine() {
-    chown datasunrise:datasunrise -R *
+    chown -R datasunrise:datasunrise !(PortBinder|AppFirewallCore_Sniffer)
 }
 cleanLogs() {
     rm -f $DSROOT/logs/Backend*

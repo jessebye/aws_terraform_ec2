@@ -65,17 +65,17 @@ checkInstanceExists() {
       return 1
     fi
 }
-checkNeigbrours()
+checkNeighbours()
 {
   echo "Checking neigbour instances from my ASG..." >> $PREP_LOG
   TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
   INST_ID=`curl -s http://169.254.169.254/latest/meta-data/instance-id -H "X-aws-ec2-metadata-token: $TOKEN"`
-  local neigbours=$(aws ec2 describe-instances --filters Name=tag:aws:autoscaling:groupName,Values=${ASG_NAME} | python -c "import sys,json; [sys.stdout.write(str(inst)) for instance in json.load(sys.stdin)['Reservations'] for inst in instance['Instances'] if inst['InstanceId'] != '$INST_ID']")
-  if [[ -z $neigbours ]]; then
+  local neighbours=$(aws ec2 describe-instances --filters Name=tag:aws:autoscaling:groupName,Values=${ASG_NAME} | python -c "import sys,json; [sys.stdout.write(str(inst)) for instance in json.load(sys.stdin)['Reservations'] for inst in instance['Instances'] if inst['InstanceId'] != '$INST_ID']")
+  if [[ -z $neighbours ]]; then
     echo "No neighbours found, returning 0" >> $PREP_LOG
     return 0
   else
-    echo "Neigbours found, returning 1" >> $PREP_LOG
+    echo "Neighbours found, returning 1" >> $PREP_LOG
     return 1
   fi
 }
@@ -92,7 +92,7 @@ processSetupOrCopy()
   if [ $? == 1 ]; then
     copyProxy
   else
-    checkNeigbrours
+    checkNeighbours
     if [ $? == 0 ]; then
       setupProxy
     else
@@ -159,7 +159,7 @@ setupDSLicense() {
     fi
     echo "$DSLicenseKey" > /tmp/appfirewall.reg
     mv /tmp/appfirewall.reg $DSROOT/
-    makeItMineParam $DSROOT/
+    makeItMineParam $DSROOT/appfirewall.pem
     echo "Setup license result - $?" >> $PREP_LOG
 }
 onAbortSetup() {
@@ -189,9 +189,9 @@ runCleaningTask() {
     echo "Run node cleaning task - $RETVAL" >> $PREP_LOG
 } 
 configureKeepAlive() {
-    echo "net.ipv4.tcp_keepalive_time = 60" >> /etc/sysctl.conf
-    echo "net.ipv4.tcp_keepalive_intvl = 10" >> /etc/sysctl.conf
-    echo "net.ipv4.tcp_keepalive_probes = 6" >> /etc/sysctl.conf
+    echo "net.ipv4.tcp_keepalive_time = 60" | tee -a /etc/sysctl.conf
+    echo "net.ipv4.tcp_keepalive_intvl = 10" | tee -a /etc/sysctl.conf
+    echo "net.ipv4.tcp_keepalive_probes = 6" | tee -a /etc/sysctl.conf
     sysctl -p
 }
 createRDSKeyGroup() {
@@ -209,7 +209,17 @@ configureJVM() {
 }
 setcapAppFirewallCore() {
       echo "Executing setcap on $DSROOT/AppFirewallCore" >> $PREP_LOG
-      setcap 'cap_net_raw,cap_net_admin=eip cap_net_bind_service=ep' $DSROOT/AppFirewallCore
+      DS_VER=$($DSROOT/AppBackendService VERSION)
+      DS_VER_MAJ=${!DS_VER:0:1}
+      DS_VER_MIN=${!DS_VER:2:1}
+      if [ $DS_VER_MAJ -ge 9 ]; then
+        echo "No setcap required for $DS_VER" >> $PREP_LOG
+      elif  [ $DS_VER_MAJ -eq 8 ] && [ $DS_VER_MIN -ge 1 ]; then
+        echo "No setcap required for $DS_VER" >> $PREP_LOG
+      else
+        echo "No setcap required for $DS_VER" >> $PREP_LOG
+        setcap 'cap_net_raw,cap_net_admin=eip cap_net_bind_service=ep' $DSROOT/AppFirewallCore
+      fi
       echo "Execution finished. Exit code is - $?" >> $PREP_LOG
 }
 setDictionaryLicense()
