@@ -156,42 +156,6 @@ resource "aws_db_instance" "audit_db" {
   depends_on = [aws_db_subnet_group.ds_db_subnet_group, aws_security_group.ds_config_sg]
 }
 
-data "template_file" "script" {
-  template = file("${path.module}/scripts/cf-params.sh")
-  vars = {
-    DSDISTURL            = var.ds_dist_url
-    STACKNAME            = "${var.deployment_name}-launch-configuration"
-    DeploymentName       = var.deployment_name
-    EC2REGION            = data.aws_region.current.name
-    DSLICTYPE            = var.ds_license_type
-    AWSCLIProxy          = var.aws_cli_proxy
-    AlarmEmail           = ""
-    AMinSize             = var.ec2_count
-    ASG_NAME             = "${var.deployment_name}-auto-scaling-group"
-    BackupS3BucketName   = var.s3_bucket_name
-    DSSGroupId           = aws_security_group.ec2sg.id
-    DNSName              = aws_lb.ds_ntwrk_load_balancer.dns_name
-    AdminLocationCIDR    = var.admin_location_CIDR
-    TRG_DBTYPE           = var.ds_instance_type
-    TRG_DBHOST           = var.ds_instance_host
-    TRG_DBPORT           = var.ds_instance_port
-    TRG_DBNAME           = var.ds_instance_database_name
-    TRG_DBUSER           = var.ds_instance_login
-    HA_DBTYPE            = "postgresql"
-    HA_DBHOST            = aws_db_instance.dictionary_db.address
-    HA_DBPORT            = aws_db_instance.dictionary_db.port
-    HA_DBNAME            = aws_db_instance.dictionary_db.name
-    HA_DBUSER            = aws_db_instance.dictionary_db.username
-    HA_AUTYPE            = "1"
-    HA_AUHOST            = aws_db_instance.audit_db.address
-    HA_AUPORT            = aws_db_instance.audit_db.port
-    HA_AUNAME            = aws_db_instance.audit_db.name
-    HA_AUUSER            = aws_db_instance.audit_db.username
-    CWLOGUPLOAD_ENABLED  = var.cloudwatch_log_sync_enabled
-    CWLOGUPLOAD_INTERVAL = var.cloudwatch_log_sync_interval
-  }
-}
-
 data "template_cloudinit_config" "example" {
   gzip          = true
   base64_encode = true
@@ -284,7 +248,38 @@ EOF
 
   part {
     content_type = "text/x-shellscript"
-    content      = data.template_file.script.rendered
+    content = templatefile("${path.module}/scripts/cf-params.sh", {
+      DSDISTURL            = var.ds_dist_url
+      STACKNAME            = "${var.deployment_name}-launch-configuration"
+      DeploymentName       = var.deployment_name
+      EC2REGION            = data.aws_region.current.name
+      DSLICTYPE            = var.ds_license_type
+      AWSCLIProxy          = var.aws_cli_proxy
+      AlarmEmail           = ""
+      AMinSize             = var.ec2_count
+      ASG_NAME             = "${var.deployment_name}-auto-scaling-group"
+      BackupS3BucketName   = var.s3_bucket_name
+      DSSGroupId           = aws_security_group.ec2sg.id
+      DNSName              = aws_lb.ds_ntwrk_load_balancer.dns_name
+      AdminLocationCIDR    = var.admin_location_CIDR
+      TRG_DBTYPE           = var.ds_instance_type
+      TRG_DBHOST           = var.ds_instance_host
+      TRG_DBPORT           = var.ds_instance_port
+      TRG_DBNAME           = var.ds_instance_database_name
+      TRG_DBUSER           = var.ds_instance_login
+      HA_DBTYPE            = "postgresql"
+      HA_DBHOST            = aws_db_instance.dictionary_db.address
+      HA_DBPORT            = aws_db_instance.dictionary_db.port
+      HA_DBNAME            = aws_db_instance.dictionary_db.name
+      HA_DBUSER            = aws_db_instance.dictionary_db.username
+      HA_AUTYPE            = "1"
+      HA_AUHOST            = aws_db_instance.audit_db.address
+      HA_AUPORT            = aws_db_instance.audit_db.port
+      HA_AUNAME            = aws_db_instance.audit_db.name
+      HA_AUUSER            = aws_db_instance.audit_db.username
+      CWLOGUPLOAD_ENABLED  = var.cloudwatch_log_sync_enabled
+      CWLOGUPLOAD_INTERVAL = var.cloudwatch_log_sync_interval
+    })
   }
 
   part {
