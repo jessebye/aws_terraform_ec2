@@ -34,6 +34,13 @@ resource "aws_security_group" "ds_config_sg" {
   name        = "${var.deployment_name}-DataSunrise-Config-SG"
   description = "Enables DataSunrise nodes access to dictionary/audit RDS"
   vpc_id      = var.vpc_id
+
+  ingress {
+    from_port = aws_db_instance.dictionary_db.port
+    to_port = aws_db_instance.dictionary_db.port
+    protocol = "tcp"
+    security_groups = [aws_security_group.ec2sg.id]
+  }
   
   egress {
     from_port   = 0
@@ -49,16 +56,6 @@ resource "aws_security_group" "ds_config_sg" {
 
 data "aws_subnet" "targetcidr" {
   id = var.ASGLB_subnets[0]
-}
-
-resource "aws_security_group_rule" "ds_config_indound" {
-  type              = "ingress"
-  from_port         = aws_db_instance.dictionary_db.port
-  to_port           = aws_db_instance.dictionary_db.port
-  protocol          = "tcp"
-  security_group_id = aws_security_group.ds_config_sg.id
-  source_security_group_id = aws_security_group.ec2sg.id
-  depends_on = [aws_security_group.ec2sg,aws_db_instance.dictionary_db]
 }
 
 resource "aws_security_group" "ec2sg" {
@@ -94,6 +91,13 @@ resource "aws_security_group" "ec2sg" {
     cidr_blocks = [data.aws_subnet.targetcidr.cidr_block]
   }
   
+  ingress {
+    from_port = 11000
+    to_port = 11010
+    protocol = "tcp"
+    self = true
+  }
+  
   egress {
     from_port   = 0
     to_port     = 0
@@ -104,16 +108,6 @@ resource "aws_security_group" "ec2sg" {
   tags = {
     Name = "${var.deployment_name}-DataSunrise-EC2-SG"
   }
-}
-
-resource "aws_security_group_rule" "ec2_sg_ingressRules11010" {
-  type              = "ingress"
-  from_port         = 11000
-  to_port           = 11010
-  protocol          = "tcp"
-  security_group_id = aws_security_group.ec2sg.id
-  source_security_group_id = aws_security_group.ec2sg.id
-  depends_on = [aws_security_group.ec2sg]
 }
 
 resource "aws_db_subnet_group" "ds_db_subnet_group" {
