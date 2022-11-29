@@ -311,6 +311,11 @@ resource "aws_launch_configuration" "ds_launch_configuration" {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
   }
+  lifecycle {
+    ignore_changes = [ 
+      user_data_base64
+    ]
+  }
 
   depends_on = [aws_db_instance.dictionary_db,aws_db_instance.audit_db]
 }
