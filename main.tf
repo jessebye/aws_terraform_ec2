@@ -289,22 +289,19 @@ EOF
 
 }
 
-resource "aws_launch_configuration" "ds_launch_configuration" {
-  name_prefix          = "${var.deployment_name}-launch-configuration"
-  image_id             = lookup(var.regions_amis, data.aws_region.current.name)
-  instance_type        = var.ds_launch_configuration_instance_type
-  security_groups      = [aws_security_group.ec2sg.id]
-  key_name             = var.ds_launch_configuration_ec2_keyname
-  iam_instance_profile = aws_iam_instance_profile.ds_node_profile.name
-  user_data_base64     = data.cloudinit_config.example.rendered
+resource "aws_launch_template" "ds_launch_template" {
+  name_prefix            = "${var.deployment_name}-launch-configuration"
+  image_id               = lookup(var.regions_amis, data.aws_region.current.name)
+  instance_type          = var.ds_launch_configuration_instance_type
+  vpc_security_group_ids = [aws_security_group.ec2sg.id]
+  key_name               = var.ds_launch_configuration_ec2_keyname
+  iam_instance_profile {
+    arn = aws_iam_instance_profile.ds_node_profile.arn
+  }
+  user_data = data.cloudinit_config.example.rendered
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
-  }
-  lifecycle {
-    ignore_changes = [
-      user_data_base64
-    ]
   }
 
   depends_on = [aws_db_instance.dictionary_db, aws_db_instance.audit_db]
@@ -370,24 +367,26 @@ resource "aws_lb" "ds_ntwrk_load_balancer" {
 
 resource "aws_autoscaling_attachment" "asg_attachment_webui_tg" {
   autoscaling_group_name = aws_autoscaling_group.ds_autoscaling_group.id
-  alb_target_group_arn   = aws_lb_target_group.nlb_webui_tg.arn
+  lb_target_group_arn    = aws_lb_target_group.nlb_webui_tg.arn
 
   depends_on = [aws_lb_target_group.nlb_webui_tg]
 }
 
 resource "aws_autoscaling_attachment" "asg_attachment_proxy_tg" {
   autoscaling_group_name = aws_autoscaling_group.ds_autoscaling_group.id
-  alb_target_group_arn   = aws_lb_target_group.nlb_proxy_tg.arn
+  lb_target_group_arn    = aws_lb_target_group.nlb_proxy_tg.arn
 
   depends_on = [aws_lb_target_group.nlb_proxy_tg]
 }
 
 
 resource "aws_autoscaling_group" "ds_autoscaling_group" {
-  name                 = "${var.deployment_name}-auto-scaling-group"
-  launch_configuration = aws_launch_configuration.ds_launch_configuration.name
-  max_size             = var.ec2_count
-  min_size             = var.ec2_count
+  name = "${var.deployment_name}-auto-scaling-group"
+  launch_template {
+    name = aws_launch_template.ds_launch_template.name
+  }
+  max_size = var.ec2_count
+  min_size = var.ec2_count
   #ENTER-SUBNET-IDS-LIST HERE. YOU CAN SEE AN EXAMPLE HOW TO GET FIRST, SECOND ELEMENT FROM THE LIST DEFINED IN VARIABLES.TF
   vpc_zone_identifier       = tolist([var.ASGLB_subnets[0]])
   health_check_type         = var.health_check_type
@@ -401,7 +400,7 @@ resource "aws_autoscaling_group" "ds_autoscaling_group" {
     propagate_at_launch = true
   }
 
-  depends_on = [aws_launch_configuration.ds_launch_configuration, aws_lb_target_group.nlb_webui_tg, aws_lb_target_group.nlb_proxy_tg]
+  depends_on = [aws_launch_template.ds_launch_template, aws_lb_target_group.nlb_webui_tg, aws_lb_target_group.nlb_proxy_tg]
 }
 
 resource "aws_autoscaling_policy" "ds_autoscaling_policy" {
@@ -593,7 +592,7 @@ EOF
 resource "aws_iam_policy" "s3_get_distribution_policy" {
   name  = "${var.deployment_name}-S3GetDistributionPolicy"
   path  = "/"
-  count = element(split("//", "${var.ds_dist_url}"), 0) == "s3:" ? 1 : 0
+  count = element(split("//", var.ds_dist_url), 0) == "s3:" ? 1 : 0
 
   policy = <<EOF
 {
@@ -696,7 +695,7 @@ resource "aws_iam_role_policy_attachment" "s3-role-attach" {
 resource "aws_iam_role_policy_attachment" "s3-get-distribution-role-attach" {
   role       = aws_iam_role.role.name
   policy_arn = aws_iam_policy.s3_get_distribution_policy[count.index].arn
-  count      = element(split("//", "${var.ds_dist_url}"), 0) == "s3:" ? 1 : 0
+  count      = element(split("//", var.ds_dist_url), 0) == "s3:" ? 1 : 0
 }
 
 resource "aws_iam_role_policy_attachment" "cw-role-attach" {
