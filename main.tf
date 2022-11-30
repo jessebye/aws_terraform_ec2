@@ -119,7 +119,7 @@ resource "aws_db_subnet_group" "ds_db_subnet_group" {
 
 resource "aws_db_instance" "dictionary_db" {
   identifier             = "${var.deployment_name}-dictionary"
-  name                   = var.dictionary_db_name
+  db_name                = var.dictionary_db_name
   engine                 = "Postgres"
   engine_version         = "14.2"
   instance_class         = var.dictionary_db_class
@@ -139,7 +139,7 @@ resource "aws_db_instance" "dictionary_db" {
 
 resource "aws_db_instance" "audit_db" {
   identifier             = "${var.deployment_name}-audit"
-  name                   = var.audit_db_name
+  db_name                = var.audit_db_name
   engine                 = "Postgres"
   engine_version         = "14.2"
   instance_class         = var.audit_db_class
@@ -156,7 +156,7 @@ resource "aws_db_instance" "audit_db" {
   depends_on = [aws_db_subnet_group.ds_db_subnet_group, aws_security_group.ds_config_sg]
 }
 
-data "template_cloudinit_config" "example" {
+data "cloudinit_config" "example" {
   gzip          = true
   base64_encode = true
 
@@ -290,13 +290,13 @@ EOF
 }
 
 resource "aws_launch_configuration" "ds_launch_configuration" {
-  name                 = "${var.deployment_name}-launch-configuration"
+  name_prefix          = "${var.deployment_name}-launch-configuration"
   image_id             = lookup(var.regions_amis, data.aws_region.current.name)
   instance_type        = var.ds_launch_configuration_instance_type
   security_groups      = [aws_security_group.ec2sg.id]
   key_name             = var.ds_launch_configuration_ec2_keyname
   iam_instance_profile = aws_iam_instance_profile.ds_node_profile.name
-  user_data_base64     = data.template_cloudinit_config.example.rendered
+  user_data_base64     = data.cloudinit_config.example.rendered
   metadata_options {
     http_endpoint = "enabled"
     http_tokens   = "required"
