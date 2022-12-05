@@ -23,12 +23,17 @@ variable "ds_launch_configuration_instance_type" {
   default     = "t3.medium"
 }
 
+variable "ds_launch_configuration_root_volume_size" {
+  description = "The root volume size to use (in GiB)"
+  default     = 20
+}
+
 # ------------------------------------------------------------------------------
 # Network Configuration
 # ------------------------------------------------------------------------------
 
 variable "vpc_id" {
-  description = "Prefered VPC Id"
+  description = "Preferred VPC Id"
   #Must be the VPC Id of an existing Virtual Private Cloud.
   default = "xxxxxxxxx"
 }

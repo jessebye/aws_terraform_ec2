@@ -298,6 +298,12 @@ resource "aws_launch_template" "ds_launch_template" {
   iam_instance_profile {
     arn = aws_iam_instance_profile.ds_node_profile.arn
   }
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size = var.ds_launch_configuration_root_volume_size
+    }
+  }
   user_data = data.cloudinit_config.example.rendered
   metadata_options {
     http_endpoint = "enabled"
