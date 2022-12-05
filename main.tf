@@ -121,7 +121,7 @@ resource "aws_db_instance" "dictionary_db" {
   identifier             = "${var.deployment_name}-dictionary"
   db_name                = var.dictionary_db_name
   engine                 = "Postgres"
-  engine_version         = "14.2"
+  engine_version         = "14.3"
   instance_class         = var.dictionary_db_class
   port                   = var.dictionary_db_port
   username               = var.db_username
@@ -141,7 +141,7 @@ resource "aws_db_instance" "audit_db" {
   identifier             = "${var.deployment_name}-audit"
   db_name                = var.audit_db_name
   engine                 = "Postgres"
-  engine_version         = "14.2"
+  engine_version         = "14.3"
   instance_class         = var.audit_db_class
   username               = var.db_username
   password               = var.db_password
